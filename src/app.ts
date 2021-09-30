@@ -34,7 +34,7 @@ class Drawing extends DrawingCommon {
         mesh.position.set(0,0,1);
         objectRoot.add( mesh );
 
-        geometry = new THREE.SphereGeometry( 0.2, 10, 10 );
+        geometry = new THREE.TorusKnotGeometry(0.2, 0.05, 40, 10);
         material = new THREE.MeshStandardMaterial( { color: 0xffff00, flatShading: false } );
         mesh = new THREE.Mesh( geometry, material );
 
@@ -60,12 +60,27 @@ class Drawing extends DrawingCommon {
     animStartX = ANIMX  // start and end x position
     animEndX = -ANIMX
     
+    quatStart1End2 = new THREE.Quaternion();
+    quatEnd1 = new THREE.Quaternion();
+    quatStart2 = new THREE.Quaternion();
+
+    quatStart = new THREE.Quaternion();
+    quatEnd = new THREE.Quaternion();
+
+    y = new THREE.Vector3(0,1,0)
+
 	/*
 	Update the scene during requestAnimationFrame callback before rendering
 	*/
 	updateScene(time: DOMHighResTimeStamp){
         // set up the first time
         if (!this.animating) {
+            this.quatStart1End2.setFromAxisAngle(this.y, 0)
+            this.quatEnd1.setFromAxisAngle(this.y, Math.PI - 0.01)
+            this.quatStart2.setFromAxisAngle(this.y, Math.PI + 0.01)
+
+            this.quatStart.copy(this.quatStart1End2)
+            this.quatEnd.copy(this.quatEnd1)
             this.animating = true
             this.animStart = time;
             this.animEnd = this.animStart + this.animLengthTime
@@ -79,6 +94,13 @@ class Drawing extends DrawingCommon {
             this.animStartX *= -1
             this.animEndX *= -1
             this.animDist *= -1
+            if (this.animDist < 0) {
+                this.quatStart.copy(this.quatStart1End2)
+                this.quatEnd.copy(this.quatEnd1)    
+            } else {
+                this.quatStart.copy(this.quatStart2)
+                this.quatEnd.copy(this.quatStart1End2)    
+            }
         }
 
         // t goes from 0..1 over the time interval
@@ -86,6 +108,8 @@ class Drawing extends DrawingCommon {
 
         // get the position along the line
         this.animatedMesh.position.x = this.animStartX + t * this.animDist
+
+        this.animatedMesh.quaternion.slerpQuaternions(this.quatStart, this.quatEnd, t)
     }
 }
 
